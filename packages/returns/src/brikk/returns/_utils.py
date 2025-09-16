@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from functools import wraps
 from typing import TYPE_CHECKING, ParamSpec, TypeVar
 
@@ -10,6 +11,8 @@ if TYPE_CHECKING:
 
 P = ParamSpec("P")
 T = TypeVar("T")
+U = TypeVar("U")
+AnyE = TypeVar("AnyE")
 E = TypeVar("E", bound=Exception)
 
 
@@ -147,3 +150,22 @@ def safe(
         return as_result(func, exceptions)
 
     return _make
+
+
+def loop(
+    iterable: Iterable[Result[T, AnyE]],
+    first: Result[U, AnyE],
+    func: Callable[[Result[U, AnyE], Result[T, AnyE]], Result[U, AnyE]],
+) -> Result[U, AnyE]:
+    ret = first
+    for item in iterable:
+        ret = func(ret, item)
+    return ret
+
+
+def collect(iterable: Iterable[Result[T, AnyE]]) -> Result[tuple[T, ...], AnyE]:
+    return loop(
+        iterable,
+        Ok(tuple()),
+        lambda a, b: a.and_then(lambda initial: b.map(lambda value: (*initial, value))),
+    )
