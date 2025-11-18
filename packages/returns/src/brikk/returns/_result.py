@@ -7,7 +7,9 @@ from typing import (
     TypeAlias,
     TypeGuard,
     TypeVar,
+    TypeVarTuple,
     cast,
+    overload,
 )
 
 from brikk.returns._errors import ResultExpectError, ResultUnwrapError
@@ -22,6 +24,7 @@ T = TypeVar("T")
 E = TypeVar("E")
 U = TypeVar("U")
 F = TypeVar("F")
+Ts = TypeVarTuple("Ts")
 _AnyException = TypeVar("_AnyException", bound=Exception)
 
 
@@ -165,6 +168,23 @@ class _ResultBase(Generic[T, E]):
         if self.is_err():
             raise self.error
         return self.value
+
+    @overload
+    def zip(
+        self: _ResultBase[tuple[*Ts], E], other: Result[U, E]
+    ) -> Result[tuple[*Ts, U], E]: ...
+
+    @overload
+    def zip(self: _ResultBase[T, E], other: Result[U, E]) -> Result[tuple[T, U], E]: ...
+
+    def zip(self, other: Result[U, E]):
+        return self.and_then(
+            lambda first: other.map(
+                lambda second: (*first, second)
+                if isinstance(first, tuple)
+                else (first, second)
+            )
+        )
 
 
 class Ok(_ResultBase[T, E]):

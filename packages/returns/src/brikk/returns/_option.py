@@ -7,7 +7,9 @@ from typing import (
     TypeAlias,
     TypeGuard,
     TypeVar,
+    TypeVarTuple,
     cast,
+    overload,
 )
 
 from brikk.returns._errors import OptionExpectError, OptionUnwrapError
@@ -21,6 +23,7 @@ if TYPE_CHECKING:
 T = TypeVar("T")
 E = TypeVar("E")
 U = TypeVar("U")
+Ts = TypeVarTuple("Ts")
 
 Option: TypeAlias = "Some[T] | Nothing[T]"
 
@@ -137,6 +140,23 @@ class _OptionBase(Generic[T]):
         if self.is_some() != option.is_some():
             return Some(self.value) if self.is_some() else Some(option.value)
         return Nothing()
+
+    @overload
+    def zip(
+        self: _OptionBase[tuple[*Ts]], other: Option[U]
+    ) -> Option[tuple[*Ts, U]]: ...
+
+    @overload
+    def zip(self: _OptionBase[T], other: Option[U]) -> Option[tuple[T, U]]: ...
+
+    def zip(self, other: Option[U]):
+        return self.and_then(
+            lambda first: other.map(
+                lambda second: (*first, second)
+                if isinstance(first, tuple)
+                else (first, second)
+            )
+        )
 
 
 class Some(_OptionBase[T]):
