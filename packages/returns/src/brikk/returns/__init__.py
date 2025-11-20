@@ -29,6 +29,8 @@ from brikk.returns._utils import (
     optional_of,
     result_of,
     safe,
+    unpack,
+    zipped,
 )
 
 __all__ = [
@@ -56,4 +58,6 @@ __all__ = [
     "optional_of",
     "result_of",
     "safe",
+    "unpack",
+    "zipped",
 ]

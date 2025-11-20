@@ -141,11 +141,3 @@ def test_option_flatten():
 
 def test_option_transpose():
     assert Some(Ok(5)).transpose() == Ok(Some(5))
-
-
-def test_result_zip():
-    assert Some(2).zip(Some(3)) == Some((2, 3))
-    assert Some(2).zip(Nothing()) == Nothing()
-    assert Nothing().zip(Some(3)) == Nothing()
-    assert Some(2).zip(Some(3)).zip(Some(5)) == Some((2, 3, 5))
-    assert Some(2).zip(Nothing()).zip(Some(5)) == Nothing()

@@ -1,8 +1,15 @@
 from __future__ import annotations
 
+import functools
 from collections.abc import Iterable
 from functools import wraps
-from typing import TYPE_CHECKING, ParamSpec, TypeVar
+from typing import (
+    TYPE_CHECKING,
+    ParamSpec,
+    TypeVar,
+    TypeVarTuple,
+    overload,
+)
 
 from brikk.returns import Error, Nothing, Ok, Option, Result, Some
 
@@ -14,6 +21,7 @@ T = TypeVar("T")
 U = TypeVar("U")
 AnyE = TypeVar("AnyE")
 E = TypeVar("E", bound=Exception)
+Ts = TypeVarTuple("Ts")
 
 
 def result_of(
@@ -163,9 +171,63 @@ def loop(
     return ret
 
 
-def collect(iterable: Iterable[Result[T, AnyE]]) -> Result[tuple[T, ...], AnyE]:
-    return loop(
+@overload
+def collect(
+    initial: Result[tuple[T, ...], AnyE], iterable: Iterable[Result[T, AnyE]]
+) -> Result[tuple[T, ...], AnyE]: ...
+
+
+@overload
+def collect(
+    initial: Option[tuple[T, ...]], iterable: Iterable[Option[T]]
+) -> Option[tuple[T, ...]]: ...
+
+
+def collect(
+    initial: Result[tuple[T, ...], AnyE] | Option[tuple[T, ...]],
+    iterable: Iterable[Result[T, AnyE]] | Iterable[Option[T]],
+) -> Result[tuple[T, ...], AnyE] | Option[tuple[T, ...]]:
+    return functools.reduce(
+        lambda a, b: a.and_then(lambda initial: b.map(lambda value: (*initial, value))),  # type: ignore
         iterable,
-        Ok(tuple()),
-        lambda a, b: a.and_then(lambda initial: b.map(lambda value: (*initial, value))),
+        initial,
     )
+
+
+def unpack(func: Callable[[*Ts], T]) -> Callable[[tuple[*Ts]], T]:
+    @wraps(func)
+    def _wrapper(args: tuple[*Ts]) -> T:
+        return func(*args)
+
+    return _wrapper
+
+
+@overload
+def zipped(
+    func: Callable[[T], Result[U, AnyE]],
+) -> Callable[[T], Result[tuple[T, U], AnyE]]: ...
+@overload
+def zipped(
+    func: Callable[[T], Option[U]],
+) -> Callable[[T], Option[tuple[T, U]]]: ...
+@overload
+def zipped(
+    func: Callable[[*Ts], Result[U, AnyE]],
+) -> Callable[[tuple[*Ts]], Result[tuple[*Ts, U], AnyE]]: ...
+@overload
+def zipped(
+    func: Callable[[*Ts], Option[U]],
+) -> Callable[[tuple[*Ts]], Option[tuple[*Ts, U]]]: ...
+
+
+def zipped(func):  # type: ignore
+    @wraps(func)
+    def _wrapper(*args):
+        if len(args) == 1 and isinstance(args[0], tuple):
+            _args = args[0]
+        else:
+            _args = args
+
+        return func(*_args).map(lambda other: (*_args, other))
+
+    return _wrapper

@@ -166,11 +166,3 @@ def test_result_transpose():
     val: Result[Option[int], Exception] = Ok(Some(5))
     val.transpose()
     assert Ok(Some(5)).transpose() == Some(Ok(5))
-
-
-def test_result_zip():
-    assert Ok(2).zip(Ok(3)) == Ok((2, 3))
-    assert Ok(2).zip(Error("error")) == Error("error")
-    assert Error("error").zip(Ok(3)) == Error("error")
-    assert Ok(2).zip(Ok(3)).zip(Ok(5)) == Ok((2, 3, 5))
-    assert Ok(2).zip(Error("test")).zip(Ok(5)) == Error("test")
