@@ -160,17 +160,6 @@ def safe(
     return _make
 
 
-def loop(
-    iterable: Iterable[Result[T, AnyE]],
-    first: Result[U, AnyE],
-    func: Callable[[Result[U, AnyE], Result[T, AnyE]], Result[U, AnyE]],
-) -> Result[U, AnyE]:
-    ret = first
-    for item in iterable:
-        ret = func(ret, item)
-    return ret
-
-
 @overload
 def collect(
     initial: Result[tuple[T, ...], AnyE], iterable: Iterable[Result[T, AnyE]]
