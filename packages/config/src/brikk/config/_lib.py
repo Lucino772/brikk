@@ -2,9 +2,16 @@ from __future__ import annotations
 
 import json
 import os
-from typing import Any, Callable, Mapping, Protocol, TypeVar, runtime_checkable
+from pathlib import Path
+from typing import Any, Callable, Literal, Mapping, Protocol, TypeVar, runtime_checkable
 
 from brikk.config._types import Loader
+
+try:
+    from ruamel.yaml import YAML
+except ImportError:
+    YAML = None
+
 
 T = TypeVar("T", covariant=True)
 
@@ -59,10 +66,52 @@ class EnvLoader:
         return _ret
 
 
-class JsonLoader:
-    def __init__(self, path: str) -> None:
-        self.__path = path
+class _SupportsRead(Protocol[T]):
+    def read(self, length: int = ..., /) -> T: ...
+
+
+class FileLoader:
+    def __init__(
+        self,
+        path: str | os.PathLike[str],
+        parser: Callable[[_SupportsRead[bytes]], Mapping[str, Any]],
+        *,
+        missing_ok: bool = False,
+    ) -> None:
+        self.__path = Path(path)
+        self.__missing_ok = missing_ok
+        self.__parser = parser
 
     def load(self) -> Mapping[str, Any]:
+        if self.__missing_ok is True and self.__path.exists() is False:
+            return {}
+
         with open(self.__path, "rb") as fp:
-            return json.load(fp)
+            return self.__parser(fp)
+
+
+class JsonLoader(FileLoader):
+    def __init__(
+        self, path: str | os.PathLike[str], *, missing_ok: bool = False
+    ) -> None:
+        super().__init__(path, json.load, missing_ok=missing_ok)
+
+
+if YAML is not None:
+
+    class YamlLoader(FileLoader):
+        _yaml = YAML
+
+        def __init__(
+            self,
+            path: str | os.PathLike[str],
+            *,
+            missing_ok: bool = False,
+            yaml_typ: Literal["rt", "safe", "unsafe", "full", "base"] | None = None,
+            yaml_pure: bool = False,
+        ) -> None:
+            super().__init__(
+                path,
+                self._yaml(typ=yaml_typ, pure=yaml_pure).load,
+                missing_ok=missing_ok,
+            )
