@@ -8,7 +8,6 @@ from brikk.cancel._types import (
     CancelledToken,
     Token,
     TokenCancelledError,
-    TokenError,
     TokenTimeoutError,
 )
 
@@ -55,11 +54,12 @@ def with_timeout(parent: Token, timeout: float) -> tuple[Token, Callable[[], Non
     token = _CancellableToken()
     timer = threading.Timer(timeout, partial(token.cancel, TokenTimeoutError()))
 
-    def _cancel(error: TokenError | None):
+    def _cancel(error: Exception | None):
         token.cancel(error)
         timer.cancel()
 
     parent.register(_cancel)
+    timer.daemon = True
     timer.start()
     return token, partial(_cancel, None)
 
@@ -77,19 +77,19 @@ def is_token_cancelled(token: Token) -> TypeGuard[CancelledToken]:
 
 
 class _DefaultToken:
-    def register(self, fn: Callable[[TokenError], None]) -> None:
+    def register(self, fn: Callable[[Exception], None]) -> None:
         pass
 
     def is_cancelled(self) -> bool:
         return False
 
-    def get_error(self) -> TokenError | None:
+    def get_error(self) -> Exception | None:
         return None
 
     def raise_if_cancelled(self) -> None:
         pass
 
-    def wait(self, timeout: float | None) -> TokenError | None:
+    def wait(self, timeout: float | None) -> Exception | None:
         return None
 
 
@@ -98,10 +98,10 @@ class _CancellableToken:
         self.__lock = threading.RLock()
         self.__signal = threading.Event()
 
-        self.__callbacks: list[Callable[[TokenError], None]] = []
-        self.__error: TokenError | None = None
+        self.__callbacks: list[Callable[[Exception], None]] = []
+        self.__error: Exception | None = None
 
-    def cancel(self, error: TokenError | None = None) -> None:
+    def cancel(self, error: Exception | None = None) -> None:
         with self.__lock:
             if self.is_cancelled():
                 return
@@ -111,20 +111,20 @@ class _CancellableToken:
                 callback(self.__error)
             self.__signal.set()
 
-    def register(self, fn: Callable[[TokenError], None]) -> None:
+    def register(self, fn: Callable[[Exception], None]) -> None:
         with self.__lock:
             self.__callbacks.append(fn)
 
     def is_cancelled(self) -> bool:
         return self.__signal.is_set()
 
-    def get_error(self) -> TokenError | None:
+    def get_error(self) -> Exception | None:
         return self.__error
 
     def raise_if_cancelled(self) -> None:
         if self.__signal.is_set() and self.__error is not None:
             raise self.__error
 
-    def wait(self, timeout: float | None) -> TokenError | None:
+    def wait(self, timeout: float | None) -> Exception | None:
         self.__signal.wait(timeout)
         return self.__error

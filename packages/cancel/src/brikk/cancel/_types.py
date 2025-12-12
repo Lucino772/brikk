@@ -31,11 +31,11 @@ class Token(Protocol):
     be checked or awaited to respond to cancellation events triggered elsewhere
     """
 
-    def register(self, fn: Callable[[TokenError], None]) -> None:
+    def register(self, fn: Callable[[Exception], None]) -> None:
         """Register a callback to be invoked when the token is cancelled.
 
         :param fn: A function to call when cancellation occurs. Receives a
-            `TokenError`.
+            `Exception`.
         """
         ...
 
@@ -46,26 +46,26 @@ class Token(Protocol):
         """
         ...
 
-    def get_error(self) -> TokenError | None:
+    def get_error(self) -> Exception | None:
         """Get the cancellation error if the token has been cancelled.
 
-        :returns: The `TokenError` if cancelled, or None.
+        :returns: The `Exception` if cancelled, or None.
         """
         ...
 
     def raise_if_cancelled(self):
         """Raise the cancellation error if the token has been cancelled.
 
-        :raises TokenError: If the token is cancelled.
+        :raises Exception: If the token is cancelled.
         """
         ...
 
-    def wait(self, timeout: float | None) -> TokenError | None:
+    def wait(self, timeout: float | None) -> Exception | None:
         """Block until the token is cancelled or the timeout expires.
 
         :param timeout: Maximum time to wait in seconds, or None to wait
             indefinitely.
-        :returns: The `TokenError` if cancelled, or None if the timeout expires.
+        :returns: The `Exception` if cancelled, or None if the timeout expires.
         """
         ...
 
@@ -91,24 +91,24 @@ class CancelledToken(Token, Protocol):
         """
         ...
 
-    def get_error(self) -> TokenError:
+    def get_error(self) -> Exception:
         """Get the cancellation error.
 
-        :returns: The `TokenError` associated with this cancelled token.
+        :returns: The `Exception` associated with this cancelled token.
         """
         ...
 
     def raise_if_cancelled(self) -> NoReturn:
         """Always raises the cancellation error.
 
-        :raises TokenError: The associated cancellation error.
+        :raises Exception: The associated cancellation error.
         """
         ...
 
-    def wait(self, timeout: float | None) -> TokenError:
+    def wait(self, timeout: float | None) -> Exception:
         """Immediately returns the cancellation error.
 
         :param timeout: Ignored. Present for interface compatibility.
-        :returns: The `TokenError` associated with this cancelled token.
+        :returns: The `Exception` associated with this cancelled token.
         """
         ...
