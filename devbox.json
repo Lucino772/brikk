@@ -2,7 +2,8 @@
   "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.15.0/.schema/devbox.schema.json",
   "packages": [
     "python@3.11",
-    "uv@0.8.2"
+    "uv@0.8.2",
+    "just@1.42.4"
   ],
   "env": {
     "UV_PYTHON": "$VENV_DIR/bin/python"
